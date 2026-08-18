@@ -54,6 +54,28 @@ router.get("/category/:category" , async(req,res) =>{
     }
 })
 
+router.get("/category/:category/:subCategory", async (req, res) => {
+    try {
+        const products = await Product.find({
+            category: req.params.category,
+            subCategory: req.params.subCategory
+        });
+
+        res.status(200).json({
+            category: req.params.category,
+            subCategory: req.params.subCategory,
+            count: products.length,
+            products
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to fetch products",
+            error: error.message
+        });
+    }
+});
+
 router.get("/:id" , async(req,res) =>{
     try{
         const product = await Product.findById(req.params.id);
