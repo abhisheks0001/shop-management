@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const product = require("./models/product");
+const Admin = require("./models/Admin");
 const productRoutes = require("./routes/productroute");
 
 dotenv.config();
