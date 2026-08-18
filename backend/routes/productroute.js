@@ -127,4 +127,26 @@ router.put("/:id", async (req, res) => {
     }
 });
 
+router.delete("/:id" , async(req, res) =>{
+    try{
+        const product = await Product.findByIdAndDelete(req.params.id);
+
+        if(!product){
+            res.status(200).json({
+                message: "Product not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Product deleted Successfully",
+            product
+        });
+    } catch(error){
+        res.status(500).json({
+            message : "Failed to delete prodcut",
+            error: error.message
+        });
+    }
+})
+
 module.exports = router;

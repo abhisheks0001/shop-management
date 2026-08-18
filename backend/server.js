@@ -16,7 +16,7 @@ app.use("/api/products", productRoutes);
 const PORT = process.env.PORT;
 
 app.get("/" , (req,res) =>{
-    res.send("backend is working");
+    res.send("backend is running");
 });
 
 app.listen(PORT , () => {
