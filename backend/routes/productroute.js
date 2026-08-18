@@ -19,4 +19,20 @@ router.post("/", async (req, res) => {
     }
 });
 
+router.get("/" , async(req,res) =>{
+    try{
+        const products = await Product.find();
+
+        res.status(200).json({
+            count: products.length,
+            products
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to fetch Products",
+            error: error.message
+        });
+    }
+})
+
 module.exports = router;
