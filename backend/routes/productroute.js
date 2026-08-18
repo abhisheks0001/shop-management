@@ -35,6 +35,25 @@ router.get("/" , async(req,res) =>{
     }
 })
 
+router.get("/category/:category" , async(req,res) =>{
+    try{
+        const products = await Product.find({
+            category: req.params.category
+        });
+
+        res.status(200).json({
+            category : req.params.category,
+            count : products.length,
+            products
+        });
+    } catch(error) {
+        res.status(500).json({
+            message: "Failed to fetch category products",
+            error : error.message
+        });
+    }
+})
+
 router.get("/:id" , async(req,res) =>{
     try{
         const product = await Product.findById(req.params.id);
@@ -55,5 +74,7 @@ router.get("/:id" , async(req,res) =>{
         });
     }
 })
+
+
 
 module.exports = router;
