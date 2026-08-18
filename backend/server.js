@@ -5,6 +5,10 @@ const product = require("./models/product");
 const Admin = require("./models/Admin");
 const productRoutes = require("./routes/productroute");
 
+const cookieParser = require("cookie-parser");
+const adminRoutes  = require("./routes/adminRoute");
+
+
 dotenv.config();
 
 const app = express();
@@ -12,7 +16,10 @@ const app = express();
 connectDB();
 
 app.use(express.json());
+
+app.use(cookieParser());0
 app.use("/api/products", productRoutes);
+app.use("/api/admin", adminRoutes);
 
 const PORT = process.env.PORT;
 
