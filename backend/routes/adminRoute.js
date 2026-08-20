@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Admin = require("../models/admin");
+const adminAuth = require("../middleware/adminAuth");
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.post("/login" , async(req, res) =>{
         const {email , password} = req.body;
 
         if(!email || !password){
-            res.status(404).json({
+            return res.status(404).json({
                 message : "email and password are required"
             });
         }
@@ -20,7 +21,7 @@ router.post("/login" , async(req, res) =>{
         });
 
         if(!admin){
-            res.status(404).json({
+            return res.status(404).json({
                 message:"email or password is invalid"
             });
         }
@@ -28,7 +29,7 @@ router.post("/login" , async(req, res) =>{
         const isPasswordCorrect = await bcrypt.compare(password , admin.password);
 
         if(!isPasswordCorrect){
-            res.status(401).json({
+            return res.status(401).json({
                 message:"Email or Password is invalid"
             });
         }
@@ -44,14 +45,14 @@ router.post("/login" , async(req, res) =>{
             }
         );
 
-        res.cookie("adminToke", token , {
+        res.cookie("adminToken", token , {
             httpOnly: true,
             secure: false,
             sameSite: "lax",
             maxAge: 24 * 60 * 60 * 1000
         });
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Admin login successful",
             admin: {
                 id: admin._id,
@@ -61,11 +62,46 @@ router.post("/login" , async(req, res) =>{
                 }
         });
         } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: "Admin login failed",
             error: error.message
         });
     }
+});
+
+
+router.get("/me" , adminAuth , async (req,res) =>{
+    try{
+        const admin = await Admin.findById(req.admin.id).select("-password");
+
+        if(!admin){
+            res.status(401).json({
+                message: "Admin not found"
+            });
+        }
+
+        res.status(200).json({
+            message:"Admin is Authenticated",
+            admin
+        });
+    } catch(error) {
+        res.status(500).json({
+            message:"failed to fetch admin",
+            error: error.message
+        });
+    }
+});
+
+router.post("/logout" ,adminAuth, (req,res) =>{
+    res.clearCookie("adminToken" , {
+        httpOnly : true,
+        secure : false,
+        sameSite  :"lax"
+    });
+
+    res.status(200).json({
+        message: "Admin Logout successfully"
+    });
 });
 
 module.exports = router;

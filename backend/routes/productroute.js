@@ -3,7 +3,9 @@ const Product = require("../models/product");
 
 const router = express.Router();
 
-router.post("/", async (req, res) => {
+const adminAuth = require("../middleware/adminAuth");
+
+router.post("/", adminAuth, async (req, res) => {
     try {
         const product = await Product.create(req.body);
 
@@ -97,7 +99,7 @@ router.get("/:id" , async(req,res) =>{
     }
 })
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", adminAuth, async (req, res) => {
     try {
         const product = await Product.findByIdAndUpdate(
             req.params.id,
@@ -127,7 +129,7 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-router.delete("/:id" , async(req, res) =>{
+router.delete("/:id" ,adminAuth, async(req, res) =>{
     try{
         const product = await Product.findByIdAndDelete(req.params.id);
 
