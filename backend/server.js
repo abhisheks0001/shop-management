@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const product = require("./models/product");
 const Admin = require("./models/Admin");
+const customer = require("./models/customer");
 const productRoutes = require("./routes/productroute");
 
 const cookieParser = require("cookie-parser");

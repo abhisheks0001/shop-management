@@ -1,32 +1,40 @@
-const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
-const adminAuth = (req, res , next ) =>{
-    try{
+const customerSchema = new mongoose.Schema(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true
+        },
 
-        const Admin = req.cookies.adminToken;
+        phone: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true
+        },
 
-        if(!token){
-            res.status(401).json({
-                message: "Admin Authentication required"
-            });
+        visitCount: {
+            type: Number,
+            default: 0
+        },
+
+        firstVisitAt: {
+            type: Date,
+            default: Date.now
+        },
+
+        lastVisitAt: {
+            type: Date,
+            default: Date.now
         }
-
-        const decoded = jwt.verify(token , process.env.JWT_SECRET);
-        
-        if(decoded.role!== "admin"){
-            res.status(403).json({
-                message: "Admin access required"
-            });
-        }
-
-        req.Admin = decoded;
-
-        next();
-    } catch(error) {
-        return res.status(401).json({
-            message : "Invalid or expired admin token"
-        });
+    },
+    {
+        timestamps: true
     }
-}
+);
 
-module.exports = adminAuth;
+const Customer = mongoose.model("Customer", customerSchema);
+
+module.exports = Customer;
