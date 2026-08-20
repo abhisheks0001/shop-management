@@ -5,6 +5,7 @@ const product = require("./models/product");
 const Admin = require("./models/Admin");
 const customer = require("./models/customer");
 const productRoutes = require("./routes/productroute");
+const customerRoutes = require("./routes/customerRoute");
 
 const cookieParser = require("cookie-parser");
 const adminRoutes  = require("./routes/adminRoute");
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use(cookieParser());0
 app.use("/api/products", productRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/customer" , customerRoutes);
 
 const PORT = process.env.PORT;
 
