@@ -3,6 +3,7 @@ const Product = require("../models/product");
 const categories = require("../config/categories");
 const cloudinary = require("../config/cloudinary");
 const upload = require("../middleware/upload");
+const CategoryView = require("../models/categoryView");
 
 const router = express.Router();
 
@@ -126,6 +127,17 @@ router.get("/category/:category", async (req, res) => {
         const products = await Product.find({
             category: category
         });
+
+        await CategoryView.findOneAndUpdate(
+            { category },
+            {
+                $inc: { viewCount: 1 }
+            },
+            {
+                upsert: true,
+                new: true
+            }
+        );
 
         res.status(200).json({
             category,

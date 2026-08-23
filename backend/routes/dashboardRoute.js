@@ -4,6 +4,7 @@ const Customer = require("../models/customer");
 const Product = require("../models/product");
 const adminAuth = require("../middleware/adminAuth");
 const DashboardVisit = require("../models/dashboardVisit");
+const CategoryView = require("../models/categoryView");
 
 const router = express.Router();
 
@@ -32,13 +33,18 @@ router.get("/stats", adminAuth, async (req, res) => {
             .limit(5)
             .select("name price category subCategory images viewCount");
 
+            const mostViewedCategories = await CategoryView.find()
+            .sort({ viewCount: -1 })
+            .limit(5);
+
         res.status(200).json({
             totalVisitors,
             totalVisits: totalVisits[0]?.total || 0,
             totalCustomers,
             totalProducts,
             dashboardVisits,
-            mostViewedProducts
+            mostViewedProducts,
+            mostViewedCategories
         });
 
     } catch (error) {
