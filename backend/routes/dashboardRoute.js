@@ -27,12 +27,18 @@ router.get("/stats", adminAuth, async (req, res) => {
 
         const totalProducts = await Product.countDocuments();
 
+        const mostViewedProducts = await Product.find()
+            .sort({ viewCount: -1 })
+            .limit(5)
+            .select("name price category subCategory images viewCount");
+
         res.status(200).json({
             totalVisitors,
             totalVisits: totalVisits[0]?.total || 0,
             totalCustomers,
             totalProducts,
-            dashboardVisits
+            dashboardVisits,
+            mostViewedProducts
         });
 
     } catch (error) {

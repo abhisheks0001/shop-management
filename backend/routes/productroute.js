@@ -234,7 +234,17 @@ router.post(
 
 router.get("/:id" , async(req,res) => {
     try{
-        const product = await Product.findById(req.params.id);
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            {
+                $inc: {
+                    viewCount: 1
+                }
+            },
+            {
+                new: true
+            }
+        );
 
         if(!product){
             return res.status(400).json({
