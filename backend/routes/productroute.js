@@ -4,6 +4,7 @@ const categories = require("../config/categories");
 const cloudinary = require("../config/cloudinary");
 const upload = require("../middleware/upload");
 const CategoryView = require("../models/categoryView");
+const ProductView = require("../models/productView");
 
 const router = express.Router();
 
@@ -263,6 +264,10 @@ router.get("/:id" , async(req,res) => {
                 message : "product does not exist"
             });
         }
+
+        await ProductView.create({
+            product: product._id
+        });
 
         const relatedProducts = await Product.find({
             _id : {$ne:product._id},

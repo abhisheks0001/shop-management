@@ -5,6 +5,7 @@ const Product = require("../models/product");
 const adminAuth = require("../middleware/adminAuth");
 const DashboardVisit = require("../models/dashboardVisit");
 const CategoryView = require("../models/categoryView");
+const ProductView = require("../models/productView");
 
 const router = express.Router();
 
@@ -37,12 +38,52 @@ router.get("/stats", adminAuth, async (req, res) => {
             .sort({ viewCount: -1 })
             .limit(5);
 
-        res.status(200).json({
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
+            const endOfToday = new Date();
+            endOfToday.setHours(23, 59, 59, 999);
+
+            const todayVisitors = await Visit.countDocuments({
+                createdAt: {
+                    $gte: startOfToday,
+                    $lte: endOfToday
+                }
+            });
+
+            const activeVisitorsToday = await Visit.countDocuments({
+                lastVisitedAt: {
+                    $gte: startOfToday,
+                    $lte: endOfToday
+                }
+            });
+
+            const customersLoggedInToday = await Customer.countDocuments({
+                lastLoginAt: {
+                    $gte: startOfToday,
+                    $lte: endOfToday
+                }
+            });
+
+            const productViewsToday = await ProductView.countDocuments({
+                createdAt: {
+                    $gte: startOfToday,
+                    $lte: endOfToday
+                }
+            });
+
+        return res.status(200).json({
             totalVisitors,
             totalVisits: totalVisits[0]?.total || 0,
             totalCustomers,
             totalProducts,
             dashboardVisits,
+
+            todayVisitors,
+            activeVisitorsToday,
+            customersLoggedInToday,
+            productViewsToday,
+
             mostViewedProducts,
             mostViewedCategories
         });
