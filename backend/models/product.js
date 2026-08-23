@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const categories = require("../config/categories");
 
 const productSchema = new mongoose.Schema(
     {
@@ -23,12 +24,21 @@ const productSchema = new mongoose.Schema(
         category: {
             type: String,
             required: true,
+            enum: Object.keys(categories),
             trim: true
         },
 
         subCategory: {
             type: String,
             required: true,
+            validate: {
+                validator: function (value) {
+                return categories[this.category]?.includes(value);
+                },
+                message: function (props) {
+                return `${props.value} is not a valid subcategory for ${props.instance.category}`;
+                }
+            },
             trim: true
         },
 

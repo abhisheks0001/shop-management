@@ -1,5 +1,5 @@
 const express = require("express");
-const Customer = require("../models/Customer");
+const Customer = require("../models/customer");
 const jwt = require("jsonwebtoken");
 const customerAuth = require("../middleware/customerAuth");
 
