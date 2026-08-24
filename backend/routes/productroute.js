@@ -33,7 +33,12 @@ router.get("/", async (req, res) => {
         const {
             search,
             page = 1,
-            limit = 12
+            limit = 12,
+            sort = "newest",
+            minPrice,
+            maxPrice,
+            stockStatus,
+            featured
         } = req.query;
 
         const filter = {};
@@ -73,10 +78,44 @@ router.get("/", async (req, res) => {
                 50
             );
 
+        let sortOption = { createdAt: -1 };
+
+        if (minPrice !== undefined || maxPrice !== undefined) {
+            filter.price = {};
+
+            if (minPrice !== undefined) {
+                filter.price.$gte = Number(minPrice);
+            }
+
+            if (maxPrice !== undefined) {
+                filter.price.$lte = Number(maxPrice);
+            }
+        }
+
+        if (sort === "price-low") {
+            sortOption = { price: 1 };
+        }
+
+        if (sort === "price-high") {
+            sortOption = { price: -1 };
+        }
+
+        if (sort === "oldest") {
+            sortOption = { createdAt: 1 };
+        }
+
+        if (stockStatus)   {
+            filter.stockStatus = stockStatus;
+        }
+
+        if (featured !== undefined) {
+            filter.featured = featured === "true";
+        }
+
         const skip = (pageNumber - 1) * limitNumber;
 
         const products = await Product.find(filter)
-            .sort({ createdAt: -1 })
+            .sort(sortOption)
             .skip(skip)
             .limit(limitNumber);
 
