@@ -1,5 +1,6 @@
 const express = require("express");
 const Product = require("../models/product");
+const customerAuth = require("../middleware/customerAuth");
 const categories = require("../config/categories");
 const cloudinary = require("../config/cloudinary");
 const upload = require("../middleware/upload");
@@ -339,7 +340,7 @@ router.post(
 );
 
 
-router.get("/:id" , async(req,res) => {
+router.get("/:id" ,customerAuth, async(req,res) => {
     try{
         const product = await Product.findByIdAndUpdate(
             req.params.id,
