@@ -1,6 +1,8 @@
 require("dotenv").config();
 
 const express = require("express");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const product = require("./models/product");
@@ -17,6 +19,24 @@ const adminRoutes  = require("./routes/adminRoute");
 
 
 const app = express();
+app.use(helmet());
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    message: {
+        message: "Too many requests. Please try again later."
+    }
+});
+
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    message: {
+        message: "Too many login attempts. Please try again later."
+    }
+});
 
 connectDB();
 
@@ -28,9 +48,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 
+app.use("/api", apiLimiter);
+
+
+app.use("/api/admin", authLimiter, adminRoutes);
+app.use("/api/customer", authLimiter, customerRoutes);
+
 app.use("/api/products", productRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/customer" , customerRoutes);
 app.use("/api/visits", visitRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 

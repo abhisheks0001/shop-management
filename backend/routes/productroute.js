@@ -1,5 +1,6 @@
 const express = require("express");
 const Product = require("../models/product");
+const mongoose = require("mongoose");
 const customerAuth = require("../middleware/customerAuth");
 const categories = require("../config/categories");
 const cloudinary = require("../config/cloudinary");
@@ -211,6 +212,14 @@ router.post("/", adminAuth, async (req, res) => {
 
 router.get("/category/:category", async (req, res) => {
     try {
+
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.min(
+            Math.max(parseInt(req.query.limit) || 12, 1),
+            50
+        );
+
+        const skip = (page - 1) * limit;
         const { category } = req.params;
 
         // Check whether category exists
@@ -220,9 +229,16 @@ router.get("/category/:category", async (req, res) => {
             });
         }
 
-        const products = await Product.find({
-            category: category
-        });
+        const filter = {
+            category
+        };
+
+        const products = await Product.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const totalProducts = await Product.countDocuments(filter);
 
         await CategoryView.findOneAndUpdate(
             { category },
@@ -235,10 +251,16 @@ router.get("/category/:category", async (req, res) => {
             }
         );
 
-        res.status(200).json({
+        return res.status(200).json({
             category,
-            count: products.length,
-            products
+            products,
+
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalProducts / limit),
+                totalProducts,
+                limit
+            }
         });
 
     } catch (error) {
@@ -253,6 +275,14 @@ router.get(
     "/category/:category/:subCategory",
     async (req, res) => {
         try {
+
+            const page = Math.max(parseInt(req.query.page) || 1, 1);
+            const limit = Math.min(
+                Math.max(parseInt(req.query.limit) || 12, 1),
+                50
+            );
+
+            const skip = (page - 1) * limit;
             const { category, subCategory } = req.params;
 
             // Check category
@@ -269,16 +299,28 @@ router.get(
                 });
             }
 
-            const products = await Product.find({
+            const filter = {
                 category,
                 subCategory
-            });
+            };
 
-            res.status(200).json({
+            const products = await Product.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+
+            const totalProducts = await Product.countDocuments(filter);
+            return res.status(200).json({
                 category,
                 subCategory,
-                count: products.length,
-                products
+                products,
+
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalProducts / limit),
+                    totalProducts,
+                    limit
+                }
             });
 
         } catch (error) {
@@ -342,6 +384,13 @@ router.post(
 
 router.get("/:id" ,customerAuth, async(req,res) => {
     try{
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "Invalid product ID"
+            });
+        }
+
         const product = await Product.findByIdAndUpdate(
             req.params.id,
             {
@@ -384,6 +433,12 @@ router.get("/:id" ,customerAuth, async(req,res) => {
 
 router.put("/:id", adminAuth, async (req, res) => {
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "Invalid product ID"
+            });
+        }
         const product = await Product.findById(req.params.id);
 
         if (!product) {
@@ -431,6 +486,12 @@ router.put("/:id", adminAuth, async (req, res) => {
 
 router.delete("/:id", adminAuth, async (req, res) => {
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "Invalid product ID"
+            });
+        }
         const product = await Product.findById(req.params.id);
 
         if (!product) {
