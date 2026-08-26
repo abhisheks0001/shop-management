@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import api from "../../api/api";
 import { useAdminAuth } from "../../context/AdminAuthContext";
@@ -13,8 +14,11 @@ function AdminLogin() {
         adminLoading
     } = useAdminAuth();
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [email, setEmail] =
+        useState("");
+
+    const [password, setPassword] =
+        useState("");
 
     const [showPassword, setShowPassword] =
         useState(false);
@@ -25,8 +29,11 @@ function AdminLogin() {
     const [error, setError] =
         useState("");
 
-    // If admin is already logged in,
-    // don't show the login page again
+
+    // ============================================
+    // REDIRECT IF ALREADY LOGGED IN
+    // ============================================
+
     useEffect(() => {
         if (!adminLoading && admin) {
             navigate(
@@ -43,6 +50,10 @@ function AdminLogin() {
     ]);
 
 
+    // ============================================
+    // LOGIN SUBMIT
+    // ============================================
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -50,18 +61,62 @@ function AdminLogin() {
             setLoading(true);
             setError("");
 
+
+            // Basic validation
+
+            if (!email.trim()) {
+                toast.error(
+                    "Email is required"
+                );
+
+                return;
+            }
+
+            if (!password) {
+                toast.error(
+                    "Password is required"
+                );
+
+                return;
+            }
+
+
             const response = await api.post(
                 "/admin/login",
                 {
-                    email,
+                    email:
+                        email.trim(),
                     password
                 }
             );
 
-            // Save logged-in admin globally
+
+            /*
+                Backend response expected:
+
+                {
+                    message: "Admin login successful",
+                    admin: {
+                        id: "...",
+                        name: "...",
+                        email: "...",
+                        role: "admin"
+                    }
+                }
+            */
+
             setAdmin(
                 response.data.admin
             );
+
+
+            toast.success(
+                `Welcome ${
+                    response.data.admin?.name ||
+                    "Admin"
+                }`
+            );
+
 
             navigate(
                 "/admin/dashboard",
@@ -70,16 +125,23 @@ function AdminLogin() {
                 }
             );
 
+
         } catch (error) {
             console.error(
                 "Admin login error:",
                 error
             );
 
-            setError(
+
+            const message =
                 error.response?.data?.message ||
-                "Unable to login. Please check your credentials."
-            );
+                "Unable to login. Please check your credentials.";
+
+
+            setError(message);
+
+            toast.error(message);
+
 
         } finally {
             setLoading(false);
@@ -87,16 +149,19 @@ function AdminLogin() {
     };
 
 
-    // Context is still checking /admin/me
+    // ============================================
+    // AUTH CHECK LOADING
+    // ============================================
+
     if (adminLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gray-950">
 
                 <div className="text-center">
 
-                    <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-pink-500" />
+                    <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-gray-700 border-t-pink-500" />
 
-                    <p className="mt-4 text-sm text-gray-400">
+                    <p className="mt-4 text-sm font-medium text-gray-400">
                         Checking admin session...
                     </p>
 
@@ -107,29 +172,36 @@ function AdminLogin() {
     }
 
 
+    // ============================================
+    // PAGE
+    // ============================================
+
     return (
         <div className="grid min-h-screen bg-gray-950 lg:grid-cols-2">
 
-            {/* =========================
-                LEFT BRANDING SECTION
-            ========================== */}
+            {/* =================================
+                    LEFT BRANDING
+            ================================= */}
 
             <section className="relative hidden overflow-hidden lg:flex lg:items-center lg:justify-center">
 
+                {/* Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-pink-950" />
 
-                {/* Decorative Blur */}
-                <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-pink-600/10 blur-3xl" />
 
-                <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
+                {/* Decorative background elements */}
+                <div className="absolute -left-40 -top-40 h-[450px] w-[450px] rounded-full bg-pink-600/10 blur-3xl" />
+
+                <div className="absolute -bottom-40 right-0 h-[450px] w-[450px] rounded-full bg-purple-600/10 blur-3xl" />
 
 
                 <div className="relative z-10 max-w-xl px-12 text-white">
 
                     {/* Brand */}
+
                     <Link
                         to="/"
-                        className="text-3xl font-bold"
+                        className="inline-block text-3xl font-bold tracking-tight"
                     >
                         Shop
                         <span className="text-pink-500">
@@ -139,24 +211,24 @@ function AdminLogin() {
 
 
                     <p className="mt-12 text-sm font-bold uppercase tracking-[0.25em] text-pink-400">
-                        Administration
+                        Administration Portal
                     </p>
 
 
-                    <h1 className="mt-5 text-5xl font-bold leading-tight">
-                        Manage your shop from one place.
+                    <h1 className="mt-5 text-5xl font-bold leading-tight tracking-tight">
+                        Manage your shop from one secure dashboard.
                     </h1>
 
 
                     <p className="mt-6 max-w-lg text-lg leading-8 text-gray-400">
-                        Manage products, categories,
-                        product images and shop activity
-                        through your secure administrator
-                        dashboard.
+                        Manage products, images, categories,
+                        availability and shop activity from
+                        one place.
                     </p>
 
 
-                    {/* Feature Cards */}
+                    {/* Feature cards */}
+
                     <div className="mt-12 grid grid-cols-2 gap-4">
 
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -166,12 +238,12 @@ function AdminLogin() {
                             </div>
 
                             <h3 className="mt-4 font-bold">
-                                Products
+                                Product Management
                             </h3>
 
-                            <p className="mt-1 text-sm text-gray-400">
-                                Add, edit and manage shop
-                                products.
+                            <p className="mt-2 text-sm leading-6 text-gray-400">
+                                Add, edit and safely remove
+                                shop products.
                             </p>
 
                         </div>
@@ -184,12 +256,12 @@ function AdminLogin() {
                             </div>
 
                             <h3 className="mt-4 font-bold">
-                                Images
+                                Image Management
                             </h3>
 
-                            <p className="mt-1 text-sm text-gray-400">
-                                Upload and manage product
-                                images with Cloudinary.
+                            <p className="mt-2 text-sm leading-6 text-gray-400">
+                                Upload and replace product
+                                images using Cloudinary.
                             </p>
 
                         </div>
@@ -205,7 +277,7 @@ function AdminLogin() {
                                 Analytics
                             </h3>
 
-                            <p className="mt-1 text-sm text-gray-400">
+                            <p className="mt-2 text-sm leading-6 text-gray-400">
                                 Monitor visitors, customers
                                 and product activity.
                             </p>
@@ -220,12 +292,12 @@ function AdminLogin() {
                             </div>
 
                             <h3 className="mt-4 font-bold">
-                                Secure
+                                Secure Access
                             </h3>
 
-                            <p className="mt-1 text-sm text-gray-400">
-                                Protected administrator
-                                operations using JWT.
+                            <p className="mt-2 text-sm leading-6 text-gray-400">
+                                Protected admin operations
+                                using JWT authentication.
                             </p>
 
                         </div>
@@ -237,20 +309,21 @@ function AdminLogin() {
             </section>
 
 
-            {/* =========================
+            {/* =================================
                     LOGIN SECTION
-            ========================== */}
+            ================================= */}
 
             <section className="relative flex items-center justify-center bg-gray-50 px-4 py-12 sm:px-8">
 
                 <div className="w-full max-w-md">
 
-                    {/* Mobile Brand */}
+                    {/* Mobile brand */}
+
                     <div className="mb-10 lg:hidden">
 
                         <Link
                             to="/"
-                            className="text-3xl font-bold text-gray-900"
+                            className="text-3xl font-bold tracking-tight text-gray-900"
                         >
                             Shop
                             <span className="text-pink-600">
@@ -262,6 +335,7 @@ function AdminLogin() {
 
 
                     {/* Heading */}
+
                     <div className="mb-8">
 
                         <p className="text-sm font-bold uppercase tracking-widest text-pink-600">
@@ -272,37 +346,52 @@ function AdminLogin() {
                             Welcome back
                         </h1>
 
-                        <p className="mt-3 text-gray-500">
+                        <p className="mt-3 leading-7 text-gray-500">
                             Sign in with your administrator
-                            credentials to continue.
+                            credentials to manage the shop.
                         </p>
 
                     </div>
 
 
-                    {/* Login Card */}
+                    {/* Form */}
+
                     <form
                         onSubmit={handleSubmit}
                         className="rounded-3xl border border-gray-200 bg-white p-7 shadow-xl sm:p-8"
                     >
 
                         {/* Error */}
+
                         {error && (
                             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
 
-                                <p className="text-sm font-semibold text-red-700">
-                                    Login failed
-                                </p>
+                                <div className="flex gap-3">
 
-                                <p className="mt-1 text-sm text-red-600">
-                                    {error}
-                                </p>
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100">
+                                        ⚠️
+                                    </div>
+
+                                    <div>
+
+                                        <p className="text-sm font-semibold text-red-700">
+                                            Login failed
+                                        </p>
+
+                                        <p className="mt-1 text-sm leading-6 text-red-600">
+                                            {error}
+                                        </p>
+
+                                    </div>
+
+                                </div>
 
                             </div>
                         )}
 
 
                         {/* Email */}
+
                         <div>
 
                             <label
@@ -318,11 +407,15 @@ function AdminLogin() {
                                 required
                                 autoComplete="email"
                                 value={email}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                     setEmail(
                                         e.target.value
-                                    )
-                                }
+                                    );
+
+                                    if (error) {
+                                        setError("");
+                                    }
+                                }}
                                 placeholder="admin@example.com"
                                 className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
                             />
@@ -331,6 +424,7 @@ function AdminLogin() {
 
 
                         {/* Password */}
+
                         <div className="mt-5">
 
                             <label
@@ -353,11 +447,15 @@ function AdminLogin() {
                                     required
                                     autoComplete="current-password"
                                     value={password}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                         setPassword(
                                             e.target.value
-                                        )
-                                    }
+                                        );
+
+                                        if (error) {
+                                            setError("");
+                                        }
+                                    }}
                                     placeholder="Enter your password"
                                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 pr-20 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
                                 />
@@ -383,11 +481,32 @@ function AdminLogin() {
                         </div>
 
 
+                        {/* Security note */}
+
+                        <div className="mt-5 rounded-xl bg-gray-50 p-4">
+
+                            <div className="flex gap-3">
+
+                                <span>
+                                    🔒
+                                </span>
+
+                                <p className="text-xs leading-5 text-gray-500">
+                                    This portal is restricted to
+                                    authorized shop administrators.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
                         {/* Submit */}
+
                         <button
                             type="submit"
                             disabled={loading}
-                            className="mt-7 flex w-full items-center justify-center rounded-xl bg-gray-900 px-5 py-3.5 font-bold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="mt-7 flex w-full items-center justify-center rounded-xl bg-gray-900 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-pink-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                         >
 
                             {loading ? (
@@ -405,32 +524,24 @@ function AdminLogin() {
                     </form>
 
 
-                    {/* Security text */}
-                    <div className="mt-7 flex items-center justify-center gap-2 text-sm text-gray-400">
+                    {/* Footer */}
 
-                        <span>
-                            🔒
-                        </span>
-
-                        <span>
-                            Restricted to authorized
-                            administrators.
-                        </span>
-
-                    </div>
-
-
-                    {/* Back */}
-                    <div className="mt-4 text-center">
+                    <div className="mt-7 text-center">
 
                         <Link
                             to="/"
                             className="text-sm font-semibold text-gray-500 transition hover:text-pink-600"
                         >
-                            ← Back to shop
+                            ← Back to customer shop
                         </Link>
 
                     </div>
+
+
+                    <p className="mt-5 text-center text-xs leading-5 text-gray-400">
+                        Admin authentication is protected using
+                        HTTP-only cookies and backend authorization.
+                    </p>
 
                 </div>
 

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import api from "../../api/api";
 import AdminLayout from "../../layouts/AdminLayout";
@@ -26,14 +27,15 @@ function AddProduct() {
     const [submitting, setSubmitting] = useState(false);
 
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
-
 
     const availableSubCategories =
         formData.category
             ? categories[formData.category] || []
             : [];
 
+    // ============================================
+    // FORM CHANGE
+    // ============================================
 
     const handleChange = (e) => {
         const {
@@ -43,6 +45,18 @@ function AddProduct() {
             checked
         } = e.target;
 
+        // If category changes,
+        // reset old subcategory
+        if (name === "category") {
+            setFormData((current) => ({
+                ...current,
+                category: value,
+                subCategory: ""
+            }));
+
+            return;
+        }
+
         setFormData((current) => ({
             ...current,
             [name]:
@@ -50,32 +64,72 @@ function AddProduct() {
                     ? checked
                     : value
         }));
-
-
-        if (name === "category") {
-            setFormData((current) => ({
-                ...current,
-                category: value,
-                subCategory: ""
-            }));
-        }
     };
 
+    // ============================================
+    // IMAGE SELECTION
+    // ============================================
 
     const handleFileChange = (e) => {
-        const files = Array.from(e.target.files);
-
-        const limitedFiles = files.slice(0, 5);
-
-        setSelectedFiles(limitedFiles);
-
-        const urls = limitedFiles.map(
-            (file) => URL.createObjectURL(file)
+        const files = Array.from(
+            e.target.files || []
         );
 
+        const limitedFiles =
+            files.slice(0, 5);
+
+        if (files.length > 5) {
+            toast.error(
+                "Maximum 5 images are allowed"
+            );
+        }
+
+        // Remove previous browser preview URLs
+        previewUrls.forEach((url) => {
+            URL.revokeObjectURL(url);
+        });
+
+        const urls = limitedFiles.map(
+            (file) =>
+                URL.createObjectURL(file)
+        );
+
+        setSelectedFiles(limitedFiles);
         setPreviewUrls(urls);
     };
 
+    // ============================================
+    // CLEANUP PREVIEW URLS
+    // ============================================
+
+    useEffect(() => {
+        return () => {
+            previewUrls.forEach((url) => {
+                URL.revokeObjectURL(url);
+            });
+        };
+    }, [previewUrls]);
+
+    // ============================================
+    // REMOVE ALL SELECTED IMAGES
+    // ============================================
+
+    const handleClearImages = () => {
+        previewUrls.forEach((url) => {
+            URL.revokeObjectURL(url);
+        });
+
+        setSelectedFiles([]);
+        setPreviewUrls([]);
+
+        toast.success(
+            "Selected images removed"
+        );
+    };
+
+    // ============================================
+    // UPLOAD IMAGES TO CLOUDINARY
+    // ============================================
 
     const uploadImages = async () => {
         if (selectedFiles.length === 0) {
@@ -90,75 +144,117 @@ function AddProduct() {
 
         const response = await api.post(
             "/products/upload-image",
-            data,
-            {
-                headers: {
-                    "Content-Type":
-                        "multipart/form-data"
-                }
-            }
+            data
         );
 
-        return response.data.imageUrls || [];
+        return (
+            response.data.imageUrls || []
+        );
     };
 
+    // ============================================
+    // SUBMIT PRODUCT
+    // ============================================
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
             setSubmitting(true);
-            setUploading(
-                selectedFiles.length > 0
-            );
-
             setError("");
-            setSuccess("");
 
+            // Basic validation
+            if (!formData.name.trim()) {
+                toast.error(
+                    "Product name is required"
+                );
+                return;
+            }
 
-            const imageUrls =
-                await uploadImages();
+            if (!formData.category) {
+                toast.error(
+                    "Category is required"
+                );
+                return;
+            }
 
+            if (!formData.subCategory) {
+                toast.error(
+                    "Subcategory is required"
+                );
+                return;
+            }
 
-            setUploading(false);
+            if (
+                formData.price === "" ||
+                Number(formData.price) < 0
+            ) {
+                toast.error(
+                    "Enter a valid product price"
+                );
+                return;
+            }
 
+            let imageUrls = [];
 
+            // Upload selected images first
+            if (selectedFiles.length > 0) {
+                try {
+                    setUploading(true);
+
+                    imageUrls =
+                        await uploadImages();
+
+                } finally {
+                    setUploading(false);
+                }
+            }
+
+            // Create product
             await api.post(
                 "/products",
                 {
-                    name: formData.name,
+                    name:
+                        formData.name.trim(),
+
                     description:
-                        formData.description,
-                    price: Number(
-                        formData.price
-                    ),
+                        formData.description.trim(),
+
+                    price:
+                        Number(
+                            formData.price
+                        ),
+
                     category:
                         formData.category,
+
                     subCategory:
                         formData.subCategory,
+
                     brand:
-                        formData.brand,
+                        formData.brand.trim(),
+
                     images:
                         imageUrls,
+
                     stockStatus:
                         formData.stockStatus,
+
                     featured:
                         formData.featured
                 }
             );
 
-
-            setSuccess(
-                "Product added successfully."
+            toast.success(
+                "Product added successfully"
             );
 
-
-            setTimeout(() => {
-                navigate(
-                    "/admin/products"
-                );
-            }, 800);
-
+            navigate(
+                "/admin/products",
+                {
+                    replace: true
+                }
+            );
 
         } catch (error) {
             console.error(
@@ -166,10 +262,13 @@ function AddProduct() {
                 error
             );
 
-            setError(
+            const message =
                 error.response?.data?.message ||
-                "Unable to add product."
-            );
+                "Unable to add product.";
+
+            setError(message);
+
+            toast.error(message);
 
         } finally {
             setUploading(false);
@@ -177,54 +276,111 @@ function AddProduct() {
         }
     };
 
-
     return (
         <AdminLayout>
 
             <div className="mx-auto max-w-5xl">
 
-                {/* Header */}
-                <div className="mb-8">
+                {/* =================================
+                        HEADER
+                ================================= */}
 
-                    <p className="text-sm font-bold uppercase tracking-wider text-pink-600">
-                        Products
-                    </p>
+                <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
 
-                    <h1 className="mt-2 text-3xl font-bold text-gray-900 md:text-4xl">
-                        Add Product
-                    </h1>
+                    <div>
 
-                    <p className="mt-2 text-gray-500">
-                        Add a new product to your shop catalogue.
-                    </p>
+                        <p className="text-sm font-bold uppercase tracking-wider text-pink-600">
+                            Products
+                        </p>
+
+                        <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
+                            Add Product
+                        </h1>
+
+                        <p className="mt-2 text-gray-500">
+                            Add a new product to your shop
+                            catalogue.
+                        </p>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate(
+                                "/admin/products"
+                            )
+                        }
+                        className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:border-gray-900 hover:bg-gray-900 hover:text-white"
+                    >
+                        ← Back to Products
+                    </button>
 
                 </div>
 
+                {/* =================================
+                        ERROR
+                ================================= */}
+
+                {error && (
+
+                    <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5">
+
+                        <p className="font-semibold text-red-700">
+                            Unable to create product
+                        </p>
+
+                        <p className="mt-1 text-sm text-red-600">
+                            {error}
+                        </p>
+
+                    </div>
+
+                )}
 
                 <form
                     onSubmit={handleSubmit}
                     className="grid gap-8 lg:grid-cols-[1fr_360px]"
                 >
 
-                    {/* LEFT */}
+                    {/* =================================
+                           LEFT COLUMN
+                    ================================= */}
+
                     <div className="space-y-6">
 
-                        {/* Basic Info */}
+                        {/* PRODUCT INFO */}
+
                         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
-                            <h2 className="text-xl font-bold text-gray-900">
-                                Product Information
-                            </h2>
+                            <div>
+
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Product Information
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Information visible to
+                                    customers.
+                                </p>
+
+                            </div>
 
                             <div className="mt-6 space-y-5">
 
+                                {/* NAME */}
+
                                 <div>
 
-                                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                    <label
+                                        htmlFor="product-name"
+                                        className="mb-2 block text-sm font-semibold text-gray-700"
+                                    >
                                         Product Name
                                     </label>
 
                                     <input
+                                        id="product-name"
                                         type="text"
                                         name="name"
                                         required
@@ -235,19 +391,24 @@ function AddProduct() {
                                             handleChange
                                         }
                                         placeholder="e.g. Lakme Face Wash"
-                                        className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
+                                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
                                     />
 
                                 </div>
 
+                                {/* DESCRIPTION */}
 
                                 <div>
 
-                                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                    <label
+                                        htmlFor="product-description"
+                                        className="mb-2 block text-sm font-semibold text-gray-700"
+                                    >
                                         Description
                                     </label>
 
                                     <textarea
+                                        id="product-description"
                                         name="description"
                                         rows="5"
                                         value={
@@ -257,45 +418,64 @@ function AddProduct() {
                                             handleChange
                                         }
                                         placeholder="Describe the product..."
-                                        className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
+                                        className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
                                     />
 
                                 </div>
 
-
                                 <div className="grid gap-5 md:grid-cols-2">
+
+                                    {/* PRICE */}
 
                                     <div>
 
-                                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                        <label
+                                            htmlFor="product-price"
+                                            className="mb-2 block text-sm font-semibold text-gray-700"
+                                        >
                                             Price
                                         </label>
 
-                                        <input
-                                            type="number"
-                                            name="price"
-                                            min="0"
-                                            required
-                                            value={
-                                                formData.price
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
-                                            placeholder="299"
-                                            className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
-                                        />
+                                        <div className="relative">
+
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-gray-400">
+                                                ₹
+                                            </span>
+
+                                            <input
+                                                id="product-price"
+                                                type="number"
+                                                name="price"
+                                                min="0"
+                                                step="0.01"
+                                                required
+                                                value={
+                                                    formData.price
+                                                }
+                                                onChange={
+                                                    handleChange
+                                                }
+                                                placeholder="299"
+                                                className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-9 pr-4 outline-none transition focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
+                                            />
+
+                                        </div>
 
                                     </div>
 
+                                    {/* BRAND */}
 
                                     <div>
 
-                                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                        <label
+                                            htmlFor="product-brand"
+                                            className="mb-2 block text-sm font-semibold text-gray-700"
+                                        >
                                             Brand
                                         </label>
 
                                         <input
+                                            id="product-brand"
                                             type="text"
                                             name="brand"
                                             value={
@@ -304,8 +484,8 @@ function AddProduct() {
                                             onChange={
                                                 handleChange
                                             }
-                                            placeholder="Lakme"
-                                            className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
+                                            placeholder="e.g. Lakme"
+                                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
                                         />
 
                                     </div>
@@ -316,24 +496,40 @@ function AddProduct() {
 
                         </section>
 
+                        {/* =================================
+                              CATEGORY
+                        ================================= */}
 
-                        {/* Category */}
                         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
-                            <h2 className="text-xl font-bold text-gray-900">
-                                Category
-                            </h2>
+                            <div>
 
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Category
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Select the correct product
+                                    category and subcategory.
+                                </p>
+
+                            </div>
 
                             <div className="mt-6 grid gap-5 md:grid-cols-2">
 
+                                {/* CATEGORY */}
+
                                 <div>
 
-                                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                    <label
+                                        htmlFor="product-category"
+                                        className="mb-2 block text-sm font-semibold text-gray-700"
+                                    >
                                         Category
                                     </label>
 
                                     <select
+                                        id="product-category"
                                         name="category"
                                         required
                                         value={
@@ -342,7 +538,7 @@ function AddProduct() {
                                         onChange={
                                             handleChange
                                         }
-                                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-pink-500"
+                                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
                                     >
 
                                         <option value="">
@@ -376,14 +572,19 @@ function AddProduct() {
 
                                 </div>
 
+                                {/* SUBCATEGORY */}
 
                                 <div>
 
-                                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                    <label
+                                        htmlFor="product-subcategory"
+                                        className="mb-2 block text-sm font-semibold text-gray-700"
+                                    >
                                         Subcategory
                                     </label>
 
                                     <select
+                                        id="product-subcategory"
                                         name="subCategory"
                                         required
                                         disabled={
@@ -395,7 +596,7 @@ function AddProduct() {
                                         onChange={
                                             handleChange
                                         }
-                                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-pink-500 disabled:bg-gray-100"
+                                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-pink-500 focus:ring-4 focus:ring-pink-100 disabled:cursor-not-allowed disabled:bg-gray-100"
                                     >
 
                                         <option value="">
@@ -431,11 +632,13 @@ function AddProduct() {
 
                         </section>
 
+                        {/* =================================
+                            PRODUCT IMAGES
+                        ================================= */}
 
-                        {/* Images */}
                         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-wrap items-start justify-between gap-4">
 
                                 <div>
 
@@ -444,20 +647,24 @@ function AddProduct() {
                                     </h2>
 
                                     <p className="mt-1 text-sm text-gray-500">
-                                        Upload up to 5 images.
+                                        Upload up to 5 product
+                                        images.
                                     </p>
 
                                 </div>
 
                                 <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+
                                     {
                                         selectedFiles.length
                                     }
-                                    /5
+                                    /5 images
+
                                 </span>
 
                             </div>
 
+                            {/* FILE PICKER */}
 
                             <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center transition hover:border-pink-400 hover:bg-pink-50">
 
@@ -470,9 +677,14 @@ function AddProduct() {
                                 </span>
 
                                 <span className="mt-1 text-sm text-gray-500">
-                                    Camera or gallery
+                                    Choose from camera,
+                                    gallery or files
                                 </span>
 
+                                <span className="mt-1 text-xs text-gray-400">
+                                    Maximum 5 images • 5MB
+                                    each
+                                </span>
 
                                 <input
                                     type="file"
@@ -487,40 +699,69 @@ function AddProduct() {
 
                             </label>
 
+                            {/* PREVIEWS */}
 
-                            {previewUrls.length >
-                                0 && (
+                            {previewUrls.length > 0 && (
 
-                                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                                <div className="mt-6">
 
-                                    {previewUrls.map(
-                                        (
-                                            image,
-                                            index
-                                        ) => (
+                                    <div className="mb-3 flex items-center justify-between">
 
-                                            <div
-                                                key={
-                                                    image
-                                                }
-                                                className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
-                                            >
+                                        <p className="text-sm font-semibold text-gray-700">
+                                            Selected Images
+                                        </p>
 
-                                                <img
-                                                    src={
-                                                        image
-                                                    }
-                                                    alt={`Preview ${
-                                                        index +
-                                                        1
-                                                    }`}
-                                                    className="aspect-square w-full object-cover"
-                                                />
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                handleClearImages
+                                            }
+                                            className="text-sm font-semibold text-red-600 hover:text-red-700"
+                                        >
+                                            Remove All
+                                        </button>
 
-                                            </div>
+                                    </div>
 
-                                        )
-                                    )}
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+
+                                        {previewUrls.map(
+                                            (
+                                                image,
+                                                index
+                                            ) => (
+
+                                                <div
+                                                    key={`${image}-${index}`}
+                                                    className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
+                                                >
+
+                                                    <img
+                                                        src={
+                                                            image
+                                                        }
+                                                        alt={`Product preview ${
+                                                            index +
+                                                            1
+                                                        }`}
+                                                        className="aspect-square w-full object-cover"
+                                                    />
+
+                                                    {index ===
+                                                        0 && (
+
+                                                        <span className="absolute bottom-2 left-2 rounded-full bg-pink-600 px-2 py-1 text-[10px] font-semibold text-white">
+                                                            Main
+                                                        </span>
+
+                                                    )}
+
+                                                </div>
+
+                                            )
+                                        )}
+
+                                    </div>
 
                                 </div>
 
@@ -530,25 +771,38 @@ function AddProduct() {
 
                     </div>
 
+                    {/* =================================
+                          RIGHT COLUMN
+                    ================================= */}
 
-                    {/* RIGHT */}
                     <div className="space-y-6">
 
-                        {/* Status */}
+                        {/* STATUS */}
+
                         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
                             <h2 className="text-lg font-bold text-gray-900">
                                 Product Status
                             </h2>
 
+                            <p className="mt-1 text-sm text-gray-500">
+                                Control availability and
+                                homepage visibility.
+                            </p>
 
-                            <div className="mt-5">
+                            {/* STOCK */}
 
-                                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                            <div className="mt-6">
+
+                                <label
+                                    htmlFor="product-stock"
+                                    className="mb-2 block text-sm font-semibold text-gray-700"
+                                >
                                     Availability
                                 </label>
 
                                 <select
+                                    id="product-stock"
                                     name="stockStatus"
                                     value={
                                         formData.stockStatus
@@ -556,7 +810,7 @@ function AddProduct() {
                                     onChange={
                                         handleChange
                                     }
-                                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3"
+                                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100"
                                 >
 
                                     <option value="in-stock">
@@ -571,8 +825,9 @@ function AddProduct() {
 
                             </div>
 
+                            {/* FEATURED */}
 
-                            <label className="mt-6 flex cursor-pointer items-center justify-between rounded-xl bg-gray-50 p-4">
+                            <label className="mt-6 flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-gray-50 p-4 transition hover:bg-gray-100">
 
                                 <div>
 
@@ -580,9 +835,10 @@ function AddProduct() {
                                         Featured Product
                                     </p>
 
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        Show prominently on
-                                        the home page.
+                                    <p className="mt-1 text-xs leading-5 text-gray-500">
+                                        Show this product
+                                        prominently on the
+                                        customer home page.
                                     </p>
 
                                 </div>
@@ -596,86 +852,176 @@ function AddProduct() {
                                     onChange={
                                         handleChange
                                     }
-                                    className="h-5 w-5 accent-pink-600"
+                                    className="h-5 w-5 shrink-0 accent-pink-600"
                                 />
 
                             </label>
 
                         </section>
 
+                        {/* SUMMARY */}
 
-                        {/* Error */}
-                        {error && (
-
-                            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
-
-                                <p className="font-semibold text-red-700">
-                                    Unable to add product
-                                </p>
-
-                                <p className="mt-1 text-sm text-red-600">
-                                    {error}
-                                </p>
-
-                            </div>
-
-                        )}
-
-
-                        {/* Success */}
-                        {success && (
-
-                            <div className="rounded-2xl border border-green-200 bg-green-50 p-5 text-green-700">
-                                {success}
-                            </div>
-
-                        )}
-
-
-                        {/* Submit */}
                         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+
+                            <h2 className="text-lg font-bold text-gray-900">
+                                Summary
+                            </h2>
+
+                            <div className="mt-5 space-y-4 text-sm">
+
+                                <div className="flex items-center justify-between gap-4">
+
+                                    <span className="text-gray-500">
+                                        Product
+                                    </span>
+
+                                    <span className="max-w-40 truncate font-semibold text-gray-900">
+                                        {formData.name ||
+                                            "—"}
+                                    </span>
+
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4">
+
+                                    <span className="text-gray-500">
+                                        Price
+                                    </span>
+
+                                    <span className="font-semibold text-gray-900">
+
+                                        {formData.price !==
+                                        ""
+                                            ? `₹${formData.price}`
+                                            : "—"}
+
+                                    </span>
+
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4">
+
+                                    <span className="text-gray-500">
+                                        Category
+                                    </span>
+
+                                    <span className="font-semibold text-gray-900">
+                                        {formData.category ||
+                                            "—"}
+                                    </span>
+
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4">
+
+                                    <span className="text-gray-500">
+                                        Subcategory
+                                    </span>
+
+                                    <span className="font-semibold text-gray-900">
+                                        {formData.subCategory ||
+                                            "—"}
+                                    </span>
+
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4">
+
+                                    <span className="text-gray-500">
+                                        Images
+                                    </span>
+
+                                    <span className="font-semibold text-gray-900">
+                                        {
+                                            selectedFiles.length
+                                        }
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                        {/* SUBMIT */}
+
+                        <section className="sticky top-28 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
                             {uploading && (
 
-                                <div className="mb-4 rounded-xl bg-blue-50 p-4 text-sm font-semibold text-blue-700">
-                                    Uploading images to
-                                    Cloudinary...
+                                <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+
+                                    <div className="flex items-center gap-3">
+
+                                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+
+                                        <div>
+
+                                            <p className="text-sm font-semibold text-blue-700">
+                                                Uploading images
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-blue-500">
+                                                Uploading to
+                                                Cloudinary...
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
                                 </div>
 
                             )}
-
 
                             <button
                                 type="submit"
                                 disabled={
                                     submitting
                                 }
-                                className="w-full rounded-xl bg-gray-900 px-5 py-3.5 font-bold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex w-full items-center justify-center rounded-xl bg-gray-900 px-5 py-3.5 font-bold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
                             >
 
-                                {submitting
-                                    ? uploading
-                                        ? "Uploading Images..."
-                                        : "Creating Product..."
-                                    : "Add Product"}
+                                {submitting ? (
+
+                                    <>
+
+                                        <span className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+
+                                        {uploading
+                                            ? "Uploading Images..."
+                                            : "Creating Product..."}
+
+                                    </>
+
+                                ) : (
+
+                                    "Add Product"
+
+                                )}
 
                             </button>
 
-
                             <button
                                 type="button"
+                                disabled={
+                                    submitting
+                                }
                                 onClick={() =>
                                     navigate(
                                         "/admin/products"
                                     )
                                 }
-                                disabled={
-                                    submitting
-                                }
-                                className="mt-3 w-full rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-700 transition hover:bg-gray-100 disabled:opacity-50"
+                                className="mt-3 w-full rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
                             </button>
+
+                            <p className="mt-4 text-center text-xs leading-5 text-gray-400">
+                                Once created, the product will
+                                immediately be available to
+                                customers.
+                            </p>
 
                         </section>
 
