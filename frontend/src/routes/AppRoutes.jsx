@@ -18,6 +18,7 @@ import Dashboard from "../pages/admin/Dashboard";
 import ProductList from "../pages/admin/ProductList";
 import AddProduct from "../pages/admin/AddProduct";
 import EditProduct from "../pages/admin/EditProduct";
+import ProtectedAdminRoute from "./ProtectedAdminRoute";
 
 
 function AppRoutes() {
@@ -70,22 +71,38 @@ function AppRoutes() {
 
             <Route
                 path="/admin/dashboard"
-                element={<Dashboard />}
+                element={
+                    <ProtectedAdminRoute>
+                        <Dashboard />
+                    </ProtectedAdminRoute>
+                }
             />
 
             <Route
                 path="/admin/products"
-                element={<ProductList />}
+                element={
+                    <ProtectedAdminRoute>
+                        <ProductList />
+                    </ProtectedAdminRoute>
+                }
             />
 
             <Route
                 path="/admin/products/add"
-                element={<AddProduct />}
+                element={
+                    <ProtectedAdminRoute>
+                        <AddProduct />
+                    </ProtectedAdminRoute>
+                }
             />
 
             <Route
                 path="/admin/products/edit/:id"
-                element={<EditProduct />}
+                element={
+                    <ProtectedAdminRoute>
+                        <EditProduct />
+                    </ProtectedAdminRoute>
+                }
             />
 
 

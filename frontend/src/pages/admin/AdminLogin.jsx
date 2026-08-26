@@ -1,24 +1,20 @@
-import {
-    useEffect,
-    useState
-} from "react";
-
-import {
-    Link,
-    useNavigate
-} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import api from "../../api/api";
-
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 function AdminLogin() {
     const navigate = useNavigate();
 
-    const [email, setEmail] =
-        useState("");
+    const {
+        admin,
+        setAdmin,
+        adminLoading
+    } = useAdminAuth();
 
-    const [password, setPassword] =
-        useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
 
     const [showPassword, setShowPassword] =
         useState(false);
@@ -26,62 +22,35 @@ function AdminLogin() {
     const [loading, setLoading] =
         useState(false);
 
-    const [checkingAuth, setCheckingAuth] =
-        useState(true);
-
     const [error, setError] =
         useState("");
 
-
-    /*
-        If admin already has a valid cookie,
-        don't show login page again.
-    */
+    // If admin is already logged in,
+    // don't show the login page again
     useEffect(() => {
-
-        const checkAdmin = async () => {
-
-            try {
-
-                await api.get("/admin/me");
-
-                navigate(
-                    "/admin/dashboard",
-                    {
-                        replace: true
-                    }
-                );
-
-            } catch (error) {
-
-                // Expected if not logged in
-
-            } finally {
-
-                setCheckingAuth(false);
-
-            }
-
-        };
-
-
-        checkAdmin();
-
-    }, [navigate]);
+        if (!adminLoading && admin) {
+            navigate(
+                "/admin/dashboard",
+                {
+                    replace: true
+                }
+            );
+        }
+    }, [
+        admin,
+        adminLoading,
+        navigate
+    ]);
 
 
     const handleSubmit = async (e) => {
-
         e.preventDefault();
 
-
         try {
-
             setLoading(true);
             setError("");
 
-
-            await api.post(
+            const response = await api.post(
                 "/admin/login",
                 {
                     email,
@@ -89,6 +58,10 @@ function AdminLogin() {
                 }
             );
 
+            // Save logged-in admin globally
+            setAdmin(
+                response.data.admin
+            );
 
             navigate(
                 "/admin/dashboard",
@@ -97,32 +70,25 @@ function AdminLogin() {
                 }
             );
 
-
         } catch (error) {
-
             console.error(
                 "Admin login error:",
                 error
             );
-
 
             setError(
                 error.response?.data?.message ||
                 "Unable to login. Please check your credentials."
             );
 
-
         } finally {
-
             setLoading(false);
-
         }
-
     };
 
 
-    if (checkingAuth) {
-
+    // Context is still checking /admin/me
+    if (adminLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gray-950">
 
@@ -138,32 +104,27 @@ function AdminLogin() {
 
             </div>
         );
-
     }
 
 
     return (
-
         <div className="grid min-h-screen bg-gray-950 lg:grid-cols-2">
 
+            {/* =========================
+                LEFT BRANDING SECTION
+            ========================== */}
 
-            {/* Left Branding Section */}
             <section className="relative hidden overflow-hidden lg:flex lg:items-center lg:justify-center">
 
-
-                {/* Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-pink-950" />
 
-
-                {/* Decorative circles */}
+                {/* Decorative Blur */}
                 <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-pink-600/10 blur-3xl" />
 
                 <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
 
 
-                {/* Content */}
                 <div className="relative z-10 max-w-xl px-12 text-white">
-
 
                     {/* Brand */}
                     <Link
@@ -188,16 +149,15 @@ function AdminLogin() {
 
 
                     <p className="mt-6 max-w-lg text-lg leading-8 text-gray-400">
-                        Manage products, images,
-                        categories and shop activity
-                        through your secure admin
+                        Manage products, categories,
+                        product images and shop activity
+                        through your secure administrator
                         dashboard.
                     </p>
 
 
-                    {/* Features */}
+                    {/* Feature Cards */}
                     <div className="mt-12 grid grid-cols-2 gap-4">
-
 
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
 
@@ -228,8 +188,8 @@ function AdminLogin() {
                             </h3>
 
                             <p className="mt-1 text-sm text-gray-400">
-                                Manage Cloudinary product
-                                images.
+                                Upload and manage product
+                                images with Cloudinary.
                             </p>
 
                         </div>
@@ -246,8 +206,8 @@ function AdminLogin() {
                             </h3>
 
                             <p className="mt-1 text-sm text-gray-400">
-                                Understand customer and
-                                product activity.
+                                Monitor visitors, customers
+                                and product activity.
                             </p>
 
                         </div>
@@ -265,27 +225,25 @@ function AdminLogin() {
 
                             <p className="mt-1 text-sm text-gray-400">
                                 Protected administrator
-                                operations.
+                                operations using JWT.
                             </p>
 
                         </div>
 
-
                     </div>
-
 
                 </div>
 
             </section>
 
 
+            {/* =========================
+                    LOGIN SECTION
+            ========================== */}
 
-            {/* Login Section */}
             <section className="relative flex items-center justify-center bg-gray-50 px-4 py-12 sm:px-8">
 
-
                 <div className="w-full max-w-md">
-
 
                     {/* Mobile Brand */}
                     <div className="mb-10 lg:hidden">
@@ -303,6 +261,7 @@ function AdminLogin() {
                     </div>
 
 
+                    {/* Heading */}
                     <div className="mb-8">
 
                         <p className="text-sm font-bold uppercase tracking-widest text-pink-600">
@@ -315,21 +274,20 @@ function AdminLogin() {
 
                         <p className="mt-3 text-gray-500">
                             Sign in with your administrator
-                            credentials.
+                            credentials to continue.
                         </p>
 
                     </div>
 
 
+                    {/* Login Card */}
                     <form
                         onSubmit={handleSubmit}
                         className="rounded-3xl border border-gray-200 bg-white p-7 shadow-xl sm:p-8"
                     >
 
-
                         {/* Error */}
                         {error && (
-
                             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
 
                                 <p className="text-sm font-semibold text-red-700">
@@ -341,9 +299,7 @@ function AdminLogin() {
                                 </p>
 
                             </div>
-
                         )}
-
 
 
                         {/* Email */}
@@ -372,7 +328,6 @@ function AdminLogin() {
                             />
 
                         </div>
-
 
 
                         {/* Password */}
@@ -412,9 +367,7 @@ function AdminLogin() {
                                     type="button"
                                     onClick={() =>
                                         setShowPassword(
-                                            (
-                                                current
-                                            ) =>
+                                            (current) =>
                                                 !current
                                         )
                                     }
@@ -430,7 +383,6 @@ function AdminLogin() {
                         </div>
 
 
-
                         {/* Submit */}
                         <button
                             type="submit"
@@ -439,25 +391,21 @@ function AdminLogin() {
                         >
 
                             {loading ? (
-
                                 <>
                                     <span className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
 
                                     Signing in...
                                 </>
-
                             ) : (
-
                                 "Sign In"
-
                             )}
 
                         </button>
 
-
                     </form>
 
 
+                    {/* Security text */}
                     <div className="mt-7 flex items-center justify-center gap-2 text-sm text-gray-400">
 
                         <span>
@@ -472,6 +420,7 @@ function AdminLogin() {
                     </div>
 
 
+                    {/* Back */}
                     <div className="mt-4 text-center">
 
                         <Link
@@ -483,11 +432,9 @@ function AdminLogin() {
 
                     </div>
 
-
                 </div>
 
             </section>
-
 
         </div>
     );
