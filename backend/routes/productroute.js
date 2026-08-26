@@ -381,6 +381,46 @@ router.post(
     }
 );
 
+router.get(
+    "/admin/:id",
+    adminAuth,
+    async (req, res) => {
+        try {
+            if (
+                !mongoose.Types.ObjectId.isValid(
+                    req.params.id
+                )
+            ) {
+                return res.status(400).json({
+                    message: "Invalid product ID"
+                });
+            }
+
+            const product =
+                await Product.findById(
+                    req.params.id
+                );
+
+            if (!product) {
+                return res.status(404).json({
+                    message: "Product not found"
+                });
+            }
+
+            return res.status(200).json({
+                product
+            });
+
+        } catch (error) {
+            return res.status(500).json({
+                message:
+                    "Failed to fetch product",
+                error: error.message
+            });
+        }
+    }
+);
+
 
 router.get("/:id" ,customerAuth, async(req,res) => {
     try{
