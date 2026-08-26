@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:dio/browser.dart';
+
 import '../constants/api_constants.dart';
 
 class ApiClient {
@@ -14,5 +16,8 @@ class ApiClient {
               'Content-Type': 'application/json',
             },
           ),
-        );
+        ) {
+    dio.httpClientAdapter = BrowserHttpClientAdapter()
+      ..withCredentials = true;
+  }
 }

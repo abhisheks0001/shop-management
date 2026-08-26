@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'products_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -45,11 +45,21 @@ class AdminDashboardScreen extends StatelessWidget {
                 mainAxisSpacing: 16,
 
                 children: [
-                  _dashboardCard(
-                    icon: Icons.inventory_2,
-                    title: 'Products',
-                    subtitle: 'Manage products',
-                  ),
+                  GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProductsScreen(),
+      ),
+    );
+  },
+  child: _dashboardCard(
+    icon: Icons.inventory_2,
+    title: 'Products',
+    subtitle: 'Manage products',
+  ),
+),
 
                   _dashboardCard(
                     icon: Icons.people,
