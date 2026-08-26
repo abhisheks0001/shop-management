@@ -1,82 +1,81 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
 import api from "../../api/api";
 import CustomerLayout from "../../layouts/CustomerLayout";
 import ProductCard from "../../components/Productcard";
 
-function Products() {
+function CategoryProducts() {
+    const { category, subCategory } = useParams();
 
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     useEffect(() => {
-
         const fetchProducts = async () => {
             try {
+                setLoading(true);
+                setError("");
 
-                const response = await api.get("/products");
+                let endpoint = `/products/category/${category}`;
+
+                if (subCategory) {
+                    endpoint += `/${subCategory}`;
+                }
+
+                const response = await api.get(endpoint);
 
                 setProducts(response.data.products || []);
-
             } catch (error) {
-
                 console.error(error);
 
-                setError("Unable to load products.");
-
+                setError(
+                    error.response?.data?.message ||
+                    "Failed to load category products"
+                );
             } finally {
-
                 setLoading(false);
             }
         };
 
         fetchProducts();
 
-    }, []);
+    }, [category, subCategory]);
+
+    const readableCategory = decodeURIComponent(category);
+
+    const readableSubCategory = subCategory
+        ? decodeURIComponent(subCategory)
+        : null;
 
     return (
         <CustomerLayout>
 
-            <section className="bg-gradient-to-br from-pink-50 via-white to-purple-50">
-                <div className="mx-auto max-w-7xl px-4 py-14 md:px-8">
+            <section className="bg-gradient-to-r from-gray-900 to-gray-800">
+                <div className="mx-auto max-w-7xl px-4 py-14 text-white md:px-8">
 
-                    <p className="mb-2 font-semibold text-pink-600">
-                        Our Collection
+                    <p className="text-sm font-semibold uppercase tracking-wider text-pink-300">
+                        Category
                     </p>
 
-                    <h1 className="max-w-2xl text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
-                        Find products for your everyday needs.
+                    <h1 className="mt-2 text-4xl font-bold">
+                        {readableCategory}
                     </h1>
 
-                    <p className="mt-4 max-w-2xl text-gray-600">
-                        Explore cosmetics, personal care and general store
-                        products available from our shop.
-                    </p>
+                    {readableSubCategory && (
+                        <p className="mt-2 text-gray-300">
+                            {readableSubCategory}
+                        </p>
+                    )}
 
                 </div>
             </section>
 
             <section className="mx-auto max-w-7xl px-4 py-10 md:px-8">
 
-                <div className="mb-8 flex items-end justify-between">
-
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            All Products
-                        </h2>
-
-                        {!loading && (
-                            <p className="mt-1 text-sm text-gray-500">
-                                {products.length} products available
-                            </p>
-                        )}
-                    </div>
-
-                </div>
-
                 {loading && (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         {[1, 2, 3, 4].map((item) => (
                             <div
                                 key={item}
@@ -94,20 +93,14 @@ function Products() {
 
                 {!loading && !error && products.length === 0 && (
                     <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
-
-                        <h3 className="text-xl font-semibold text-gray-900">
-                            No products available
+                        <h3 className="text-xl font-semibold">
+                            No products found
                         </h3>
-
-                        <p className="mt-2 text-gray-500">
-                            Products added by the shop will appear here.
-                        </p>
-
                     </div>
                 )}
 
                 {!loading && !error && products.length > 0 && (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
                         {products.map((product) => (
                             <ProductCard
@@ -125,4 +118,4 @@ function Products() {
     );
 }
 
-export default Products;
+export default CategoryProducts;

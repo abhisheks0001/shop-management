@@ -4,6 +4,7 @@ import Home from "../pages/customer/Home";
 import Products from "../pages/customer/Products";
 import ProductDetails from "../pages/customer/ProductDetails";
 import CustomerLogin from "../pages/customer/CustomerLogin";
+import CategoryProducts from "../pages/customer/CategoryProducts";
 
 function AppRoutes() {
     return (
@@ -23,7 +24,19 @@ function AppRoutes() {
                 element={<CustomerLogin />}
             />
 
+            <Route
+                path="/category/:category"
+                element={<CategoryProducts />}
+            />
+
+            <Route
+                path="/category/:category/:subCategory"
+                element={<CategoryProducts />}
+            />
+
         </Routes>
+
+        
     );
 }
 
