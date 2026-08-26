@@ -6,6 +6,7 @@ import {
 
 import api from "../../api/api";
 import CustomerLayout from "../../layouts/CustomerLayout";
+import { useCustomerAuth } from "../../context/CustomerAuthContext";
 
 function CustomerLogin() {
     const navigate = useNavigate();
