@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import api from "../../api/api";
 import CustomerLayout from "../../layouts/CustomerLayout";
+import ProductCard from "../../components/Productcard";
 
 function Products() {
 
@@ -59,25 +60,19 @@ function Products() {
             {products.length === 0 ? (
                 <p>No products available.</p>
             ) : (
-                products.map((product) => (
-
-                    <div key={product._id}>
-
-                        <h3>{product.name}</h3>
-
-                        <p>
-                            ₹{product.price}
-                        </p>
-
-                        <p>
-                            {product.category}
-                            {" - "}
-                            {product.subCategory}
-                        </p>
-
-                    </div>
-
-                ))
+                <div
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap"
+                    }}
+                >
+                    {products.map((product) => (
+                        <ProductCard
+                            key={product._id}
+                            product={product}
+                        />
+                    ))}
+                </div>
             )}
 
         </CustomerLayout>
