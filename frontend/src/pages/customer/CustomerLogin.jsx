@@ -11,6 +11,7 @@ import { useCustomerAuth } from "../../context/CustomerAuthContext";
 function CustomerLogin() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { setCustomer } = useCustomerAuth();
 
     const returnPath =
         location.state?.from || "/products";
@@ -69,7 +70,7 @@ function CustomerLogin() {
             setLoading(true);
             setError("");
 
-            await api.post(
+            const response = await api.post(
                 "/customer/login/verify",
                 {
                     name,
@@ -77,6 +78,8 @@ function CustomerLogin() {
                     captcha
                 }
             );
+
+            setCustomer(response.data.customer);
 
             navigate(returnPath, {
                 replace: true
