@@ -1,12 +1,11 @@
 require("dotenv").config();
 
 const express = require("express");
-
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const cors = require("cors");
+
 const connectDB = require("./config/db");
 
 const productRoutes = require("./routes/productroute");
@@ -16,8 +15,11 @@ const dashboardRoutes = require("./routes/dashboardRoute");
 const adminRoutes = require("./routes/adminRoute");
 
 const app = express();
+
+// Security
 app.use(helmet());
 
+// General API rate limiter
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 300,
@@ -26,7 +28,7 @@ const apiLimiter = rateLimit({
     }
 });
 
-
+// Authentication rate limiter
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 20,
@@ -37,16 +39,29 @@ const authLimiter = rateLimit({
 
 connectDB();
 
-// Middleware
+// CORS
 app.use(cors({
     origin: true,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    methods: [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+    ],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization"
+    ]
 }));
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Rate limiting
+app.use("/api", apiLimiter);
 
 // Routes
 app.use("/api/products", productRoutes);
@@ -63,5 +78,7 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(
+        `Server running on http://localhost:${PORT}`
+    );
 });
