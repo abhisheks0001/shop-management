@@ -8,6 +8,10 @@ const router = express.Router();
 const captchaStore = new Map();
 
 
+// ==============================
+// START CUSTOMER LOGIN
+// ==============================
+
 router.post("/login/start", async (req, res) => {
     try {
         const { name, phone } = req.body;
@@ -33,19 +37,23 @@ router.post("/login/start", async (req, res) => {
             expiresAt: Date.now() + 5 * 60 * 1000
         });
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "CAPTCHA generated successfully",
             captcha
         });
 
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to generate CAPTCHA",
             error: error.message
         });
     }
 });
 
+
+// ==============================
+// VERIFY CUSTOMER LOGIN
+// ==============================
 
 router.post("/login/verify", async (req, res) => {
     try {
@@ -56,6 +64,7 @@ router.post("/login/verify", async (req, res) => {
                 message: "Name, phone and CAPTCHA are required"
             });
         }
+
         const storedData = captchaStore.get(phone);
 
         if (!storedData) {
@@ -63,7 +72,9 @@ router.post("/login/verify", async (req, res) => {
                 message: "CAPTCHA not found or expired"
             });
         }
+
         if (Date.now() > storedData.expiresAt) {
+
             captchaStore.delete(phone);
 
             return res.status(400).json({
@@ -76,11 +87,20 @@ router.post("/login/verify", async (req, res) => {
                 message: "Invalid CAPTCHA"
             });
         }
+
         captchaStore.delete(phone);
 
-        let customer = await Customer.findOne({ phone });
+
+        // ==============================
+        // FIND OR CREATE CUSTOMER
+        // ==============================
+
+        let customer = await Customer.findOne({
+            phone
+        });
 
         if (!customer) {
+
             customer = await Customer.create({
                 name,
                 phone,
@@ -90,12 +110,18 @@ router.post("/login/verify", async (req, res) => {
             });
 
         } else {
+
             customer.name = name;
             customer.visitCount += 1;
             customer.lastVisitAt = new Date();
 
             await customer.save();
         }
+
+
+        // ==============================
+        // GENERATE JWT TOKEN
+        // ==============================
 
         const token = jwt.sign(
             {
@@ -108,17 +134,58 @@ router.post("/login/verify", async (req, res) => {
             }
         );
 
+
+        // ==============================
+        // CLEAR ADMIN COOKIE
+        // ==============================
+
         res.clearCookie("adminToken", {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure:
+                process.env.NODE_ENV ===
+                "production",
             sameSite:
-                process.env.NODE_ENV === "production"
-                ? "none"
-                : "lax"
+                process.env.NODE_ENV ===
+                "production"
+                    ? "none"
+                    : "lax"
         });
 
-        res.status(200).json({
-            message: "Customer login successful",
+
+        // ==============================
+        // SET CUSTOMER JWT COOKIE
+        // ==============================
+
+        res.cookie(
+            "customerToken",
+            token,
+            {
+                httpOnly: true,
+
+                secure:
+                    process.env.NODE_ENV ===
+                    "production",
+
+                sameSite:
+                    process.env.NODE_ENV ===
+                    "production"
+                        ? "none"
+                        : "lax",
+
+                maxAge:
+                    7 *
+                    24 *
+                    60 *
+                    60 *
+                    1000
+            }
+        );
+
+
+        return res.status(200).json({
+            message:
+                "Customer login successful",
+
             customer: {
                 id: customer._id,
                 name: customer.name,
@@ -127,53 +194,97 @@ router.post("/login/verify", async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+
+        console.error(
+            "Customer login error:",
+            error
+        );
+
+        return res.status(500).json({
             message: "Customer login failed",
             error: error.message
         });
     }
 });
 
-router.get("/me", customerAuth, async (req, res) => {
-    try {
-        const customer = await Customer.findById(req.customer.id)
-            .select("-__v");
 
-        if (!customer) {
-            return res.status(404).json({
-                message: "Customer not found"
+// ==============================
+// GET LOGGED-IN CUSTOMER
+// ==============================
+
+router.get(
+    "/me",
+    customerAuth,
+    async (req, res) => {
+        try {
+
+            const customer =
+                await Customer.findById(
+                    req.customer.id
+                ).select("-__v");
+
+            if (!customer) {
+                return res.status(404).json({
+                    message:
+                        "Customer not found"
+                });
+            }
+
+            return res.status(200).json({
+                message:
+                    "Customer is logged in",
+                customer
+            });
+
+        } catch (error) {
+
+            console.error(
+                "Get customer error:",
+                error
+            );
+
+            return res.status(500).json({
+                message:
+                    "Failed to get customer",
+                error: error.message
             });
         }
+    }
+);
 
-        res.status(200).json({
-            message: "Customer is logged in",
-            customer
-        });
 
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to get customer",
-            error: error.message
+// ==============================
+// CUSTOMER LOGOUT
+// ==============================
+
+router.post(
+    "/logout",
+    customerAuth,
+    (req, res) => {
+
+        res.clearCookie(
+            "customerToken",
+            {
+                httpOnly: true,
+
+                secure:
+                    process.env.NODE_ENV ===
+                    "production",
+
+                sameSite:
+                    process.env.NODE_ENV ===
+                    "production"
+                        ? "none"
+                        : "lax"
+            }
+        );
+
+        return res.status(200).json({
+            message:
+                "Customer logged out successfully"
         });
     }
-});
-
-router.post("/logout",customerAuth, (req, res) => {
-
-    res.clearCookie(
-        "customerToken",
-        {
-            httpOnly: true,
-            sameSite: "lax"
-        }
-    );
-
-    return res.status(200).json({
-        message:
-            "Customer logged out successfully"
-    });
-
-});
+);
 
 
 module.exports = router;
