@@ -1,12 +1,11 @@
 require("dotenv").config();
 
 const express = require("express");
-
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const cors = require("cors");
+
 const connectDB = require("./config/db");
 
 const productRoutes = require("./routes/productroute");
@@ -16,8 +15,13 @@ const dashboardRoutes = require("./routes/dashboardRoute");
 const adminRoutes = require("./routes/adminRoute");
 
 const app = express();
+
+
+// Security Middleware
 app.use(helmet());
 
+
+// Rate Limiter for general APIs
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 300,
@@ -27,6 +31,7 @@ const apiLimiter = rateLimit({
 });
 
 
+// Rate Limiter for authentication APIs
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 20,
@@ -35,9 +40,12 @@ const authLimiter = rateLimit({
     }
 });
 
+
+// Connect MongoDB
 connectDB();
 
-// Middleware
+
+// CORS
 app.use(cors({
     origin: true,
     credentials: true,
@@ -45,21 +53,38 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+
+// Middleware
 app.use(express.json());
 app.use(cookieParser());
 
+
+// General API Rate Limiting
+app.use("/api", apiLimiter);
+
+
 // Routes
 app.use("/api/products", productRoutes);
-app.use("/api/admin", adminRoutes);
+
+app.use("/api/admin", authLimiter, adminRoutes);
+
 app.use("/api/customer", customerRoutes);
+
 app.use("/api/visits", visitRoutes);
+
 app.use("/api/dashboard", dashboardRoutes);
 
-// Test route
-app.get("/", (req, res) => {
-    res.send("backend is running");
+
+// Health Check
+app.get("/api/health", (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        message: "Shop Management API is running"
+    });
 });
 
+
+// Server
 const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, () => {
