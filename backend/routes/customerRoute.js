@@ -156,15 +156,21 @@ router.get("/me", customerAuth, async (req, res) => {
     }
 });
 
-router.post("/logout", customerAuth, (req, res) => {
-    res.clearCookie("customerToken", {
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax"
+router.post("/logout",customerAuth, (req, res) => {
+
+    res.clearCookie(
+        "customerToken",
+        {
+            httpOnly: true,
+            sameSite: "lax"
+        }
+    );
+
+    return res.status(200).json({
+        message:
+            "Customer logged out successfully"
     });
-    res.status(200).json({
-        message: "Customer logout successful"
-    });
+
 });
 
 

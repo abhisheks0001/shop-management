@@ -24,7 +24,7 @@ Node.js + Express.js + MongoDB
 
 ## Run Backend
 
-```bash
+
 cd backend
 npm install
 npm run dev

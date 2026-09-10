@@ -92,16 +92,36 @@ router.get("/me" , adminAuth , async (req,res) =>{
     }
 });
 
-router.post("/logout" ,adminAuth, (req,res) =>{
-    res.clearCookie("adminToken" , {
-        httpOnly : true,
-        secure : false,
-        sameSite  :"lax"
-    });
+router.post("/logout",adminAuth, (req, res) => {
 
-    res.status(200).json({
-        message: "Admin Logout successfully"
-    });
+    try {
+
+        res.clearCookie(
+            "adminToken",
+            {
+                httpOnly: true,
+                sameSite: "lax"
+            }
+        );
+
+
+        return res.status(200).json({
+            message:
+                "Admin logged out successfully"
+        });
+
+
+    } catch (error) {
+
+        return res.status(500).json({
+            message:
+                "Failed to logout admin",
+            error:
+                error.message
+        });
+
+    }
+
 });
 
 module.exports = router;
