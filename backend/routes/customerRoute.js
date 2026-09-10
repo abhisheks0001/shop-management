@@ -108,11 +108,13 @@ router.post("/login/verify", async (req, res) => {
             }
         );
 
-        res.cookie("customerToken", token, {
+        res.clearCookie("adminToken", {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            secure: process.env.NODE_ENV === "production",
+            sameSite:
+                process.env.NODE_ENV === "production"
+                ? "none"
+                : "lax"
         });
 
         res.status(200).json({
